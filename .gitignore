@@ -1,0 +1,42 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+
+# Virtual Environment
+.venv/
+venv/
+env/
+
+# Environment Variables
+.env
+.env.*
+!.env.example
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Distribution / Build
+dist/
+build/
+*.egg-info/
+
+# MyPy / Type checking
+.mypy_cache/
+.dmypy.json
+
+# Pytest
+.pytest_cache/
+
+# LangGraph / LangSmith
+.langgraph_cache/
