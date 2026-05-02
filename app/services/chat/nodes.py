@@ -1,6 +1,5 @@
 from dotenv import load_dotenv
 load_dotenv()
-
 from app.services.chat.model import chatState
 from app.services.chat.tools import all_tools
 from langchain_openai import ChatOpenAI
@@ -9,14 +8,14 @@ from langchain_core.messages import (
     BaseMessage, HumanMessage
 )
 from langgraph.prebuilt import ToolNode
-from langchain_core.messages import trim_messages
+from langchain_core.messages import trim_messages , RemoveMessage
 from langchain_core.messages.utils import count_tokens_approximately
 import json
-
 
 # ─────────────────────────────────────────────
 #  COMPACT VIEW
 # ─────────────────────────────────────────────
+
 def print_messages(messages: list[BaseMessage], title: str = "MESSAGE HISTORY"):
     """Compact view — role + content + tool info only."""
     role_colors = {
@@ -281,6 +280,25 @@ async def chat_node(state: chatState):
     ai_response = await llm_with_tools.ainvoke([SYSTEM_MESSAGE] + messages)
     return {"messages": [ai_response]}
 
+
+async def delete_messages(state: chatState):
+    messages = state['messages']
+    first_five = messages[:5]
+
+    return {
+        "messages": [
+            RemoveMessage(id=m.id)
+            for m in first_five
+            if m.id is not None  # ← type checker doesn't narrow in list comps in some pyright versions
+        ]
+    }
+
+async def summerize_and_delete_messages(state : chatState):
+    messgaes = state['messages']
+    if len(messgaes) <= 10:
+        pass
+    return
+        
 
 def should_use_tools(state: chatState) -> str:
     """Route to tool_node if the LLM requested tool calls, else END."""
