@@ -4,4 +4,5 @@ from langchain_core.messages import BaseMessage
 from typing import Union
 class chatState(TypedDict):
     messages : Annotated[List[BaseMessage] , add_messages]
-    summary : Union[str , None]
+    summary : str
+    memory_context : str

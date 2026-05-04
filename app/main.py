@@ -1,8 +1,9 @@
-# main.py
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
+from langgraph.store.postgres.aio import AsyncPostgresStore  # ← new
+from langchain_openai import OpenAIEmbeddings               # ← new
 import app.services.chat.graph as graph_module
 from psycopg_pool import AsyncConnectionPool
 from dotenv import load_dotenv
@@ -22,14 +23,26 @@ async def lifespan(app: FastAPI):
         conninfo=db_url,
         min_size=2,
         max_size=10,
-        kwargs={"autocommit": True},  # required by LangGraph
+        kwargs={"autocommit": True},
     ) as pool:
 
+        # your existing checkpointer — no change
         checkpointer = AsyncPostgresSaver(pool)
         await checkpointer.setup()
-        graph_module.workflow = graph_module.build_graph(checkpointer)
 
-        # Keepalive — prevents Neon from suspending compute mid-stream
+        # ← new store using same Neon pool
+        store = AsyncPostgresStore(
+            pool,
+            index={
+                "embed": OpenAIEmbeddings(),
+                "dims": 1536,
+            }
+        )
+        await store.setup()  # creates store tables + vector columns
+
+        # pass both to build_graph
+        graph_module.workflow = graph_module.build_graph(checkpointer, store)
+
         async def keepalive():
             while True:
                 await asyncio.sleep(240)
@@ -40,15 +53,13 @@ async def lifespan(app: FastAPI):
                     pass
 
         task = asyncio.create_task(keepalive())
-
         yield
-
         task.cancel()
 
 
 app = FastAPI(lifespan=lifespan)
 
-origins = ["http://localhost:3001" , "http://localhost:3000"]
+origins = ["http://localhost:3001", "http://localhost:3000"]
 
 app.add_middleware(
     CORSMiddleware,

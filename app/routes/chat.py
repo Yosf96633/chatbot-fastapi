@@ -20,6 +20,7 @@ router = APIRouter(prefix='/api/v1')
 class RequestBody(BaseModel):
     query: str
     thread_id: str
+    user_id : str
 
 
 class ResumeBody(BaseModel):
@@ -83,8 +84,8 @@ async def _stream_events(event_iter):
 
 
 # ── /chat/completions ─────────────────────────────────────────────────────────
-async def event_stream(query: str, thread_id: str, request: Request):
-    config: RunnableConfig = {"configurable": {"thread_id": thread_id}}
+async def event_stream(query: str, thread_id: str, user_id:str ,  request: Request):
+    config: RunnableConfig = {"configurable": {"thread_id": thread_id , "user_id":user_id}}
     try:
         event_iter = graph_module.workflow.astream_events(
             {"messages": [HumanMessage(content=query)]},
@@ -104,7 +105,7 @@ async def event_stream(query: str, thread_id: str, request: Request):
 @router.post("/chat/completions")
 async def chat(body: RequestBody, request: Request):
     return StreamingResponse(
-        event_stream(body.query, body.thread_id, request),
+        event_stream(body.query, body.thread_id , body.user_id, request),
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
